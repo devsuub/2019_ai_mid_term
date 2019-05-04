@@ -1,7 +1,11 @@
 # Import
+import sqlite3
+
 from random import randint
 from heuristic import heuristic
 from init import init
+
+con = sqlite3.connect(':memory:')
 
 # 선택한 열에 착수하는 함수
 def betting(turn, map):
@@ -25,7 +29,6 @@ def betting(turn, map):
 
                         # 테스트용 코드
                         # print(last_betting_point)   # 마지막 착수점 출력
-
                         return map, True, last_betting_point
                     else:
                         if i == 5:
@@ -197,7 +200,7 @@ def startGame():
 
 # 메인 함수
 game_continue = ''
-init()
+init(con)
 print()
 print("----------------------------------------")
 print("---- Artificial Intellgence Project ----")
