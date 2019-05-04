@@ -33,13 +33,14 @@ def init_winning_line():
 def init_table(con):
     cur = con.cursor()
     cur.execute("DROP TABLE IF EXISTS WINNING_LINE;")
-    cur.execute("CREATE TABLE WINNING_LINE(LINE text, AI integer, player integer);")
+    cur.execute("CREATE TABLE WINNING_LINE(LINE text, AI integer, PLAYER integer);")
 
 def init_data(con):
     cur = con.cursor()
     for line in winningLine:
         cur.execute("INSERT INTO WINNING_LINE Values(:line, 1,1);", {"line": line})
-
+    con.commit()
+    
 def init(con):
     print("database init")
     init_table(con)
