@@ -1,6 +1,7 @@
 # Import
 from random import randint
 from heuristic import heuristic
+from init import init
 
 # 선택한 열에 착수하는 함수
 def betting(turn, map):
@@ -196,6 +197,7 @@ def startGame():
 
 # 메인 함수
 game_continue = ''
+init()
 print()
 print("----------------------------------------")
 print("---- Artificial Intellgence Project ----")
