@@ -36,6 +36,7 @@ def init_winning_line():
 
 def init_table():
     cur = con.cursor()
+    cur.execute("DROP TABLE IF EXISTS WINNING_LINE;")
     cur.execute("CREATE TABLE WINNING_LINE(LINE text, CPU integer, PEOPLE integer);")
 
 def init_data():
