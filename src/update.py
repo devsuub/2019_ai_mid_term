@@ -5,9 +5,6 @@ def update_people_play(con, position):
     cur = con.cursor()
     cur.execute("UPDATE WINNING_LINE SET CPU = 0 WHERE LINE LIKE :position", {"position": "%" + position + "%"})
 
-    cur.execute("SELECT * FROM WINNING_LINE WHERE CPU = 0;")
-    for row in cur:
-        print(row)
 def update_ai_play(con, position):
     cur = con.cursor()
     cur.execute("UPDATE WINNING_LINE SET PEOPLE = 0 WHERE LINE LIKE :position", {"position": "%" + position + "%"})
