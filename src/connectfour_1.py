@@ -1,11 +1,17 @@
 # Import
 import sqlite3
-
+import update
 from random import randint
 from heuristic import heuristic
 from init import init
 
 con = sqlite3.connect(':memory:')
+
+def select_all_table(con):
+    cur = con.cursor()
+    cur.execute("SELECT * FROM WINNING_LINE")
+    for row in cur:
+        print(row)
 
 # 선택한 열에 착수하는 함수
 def betting(turn, map):
@@ -151,6 +157,10 @@ def gameOver(map, last_betting_point, turn):
 
 # 게임 실행 함수
 def startGame():
+    update.update_people_play(con, position='1A')
+    update.update_ai_play(con, position='1A')
+    #select_all_table(con)
+
     text_input = ''
     turn = 0
     map = [[0] * 7 for i in range(6)]
@@ -209,6 +219,7 @@ print("------------- Human vs CPU -------------")
 print("----------------------------------------")
 print()
 startGame()
+
 while game_continue != 'Y' and game_continue != 'y' and game_continue != 'N' and game_continue != 'n':
     game_continue = input("Do you want to restart the game? (Y/N) : ")
 
