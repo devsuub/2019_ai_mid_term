@@ -40,7 +40,7 @@ def init_data(con):
     for line in winningLine:
         cur.execute("INSERT INTO WINNING_LINE Values(:line, 1,1);", {"line": line})
     con.commit()
-    
+
 def init(con):
     print("database init")
     init_table(con)

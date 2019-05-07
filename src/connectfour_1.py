@@ -43,7 +43,7 @@ def betting(turn, map):
     else:   # 컴퓨터 차례
 
         # 테스트용 코드
-        cpu_bet = heuristic(map, last_betting_point)
+        heuristic(con, map)
         # cpu_bet = randint(0, 6) # 1~7열 사이에 랜덤하게 착수하기
         # cpu_bet = 6   # 6열에만 수 두기
 
@@ -157,8 +157,8 @@ def gameOver(map, last_betting_point, turn):
 
 # 게임 실행 함수
 def startGame():
-    update.update_people_play(con, position='1A')
-    update.update_ai_play(con, position='1A')
+    # update.update_people_play(con, position='1A')
+    # update.update_ai_play(con, position='1A')
     #select_all_table(con)
 
     text_input = ''
