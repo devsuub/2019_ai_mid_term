@@ -3,9 +3,11 @@ import sqlite3
 import update
 from random import randint
 from heuristic import heuristic
+from ruleBase import ruleBase
 from init import init
 
 con = sqlite3.connect(':memory:')
+
 
 def select_all_table(con):
     cur = con.cursor()
@@ -13,11 +15,12 @@ def select_all_table(con):
     for row in cur:
         print(row)
 
+
 # 선택한 열에 착수하는 함수
 def betting(turn, map):
     human_bet = 0
     last_betting_point = [-1] * 2
-    if turn == 1:   # 사람 차례
+    if turn == 1:  # 사람 차례
         while human_bet != '1' and human_bet != '2' and human_bet != '3' and human_bet != '4' and human_bet != '5' and human_bet != '6' and human_bet != '7':
             human_bet = input("Where do you want to bet? (1~7) : ")
 
@@ -28,23 +31,25 @@ def betting(turn, map):
                 print("Wrong Input. Please try it again.")
             else:
                 for i in range(6):
-                    if map[i][int(human_bet)-1] == 0:
-                        map[i][int(human_bet)-1] = 1
+                    if map[i][int(human_bet) - 1] == 0:
+                        map[i][int(human_bet) - 1] = 1
                         last_betting_point[0] = i
-                        last_betting_point[1] = int(human_bet)-1  #마지막 착수점 저장
+                        last_betting_point[1] = int(human_bet) - 1  # 마지막 착수점 저장
 
                         # 테스트용 코드
                         # print(last_betting_point)   # 마지막 착수점 출력
                         return map, True, last_betting_point
                     else:
                         if i == 5:
-                            print("Column "+human_bet+" is already full. Please select another column.")
+                            print("Column " + human_bet + " is already full. Please select another column.")
                             return map, False, last_betting_point
-    else:   # 컴퓨터 차례
+    else:  # 컴퓨터 차례
 
         # 테스트용 코드
-        #heuristic(con, map)
-        cpu_bet = heuristic(con, map) # 1~7열 사이에 랜덤하게 착수하기
+        # heuristic(con, map)
+        cpu_bet = ruleBase(map)
+        if (cpu_bet == -1):
+            cpu_bet = heuristic(con, map)  # 1~7열 사이에 랜덤하게 착수하기
         # cpu_bet = 6   # 6열에만 수 두기
 
         for i in range(6):
@@ -68,15 +73,15 @@ def betting(turn, map):
                     alphabet = 'E'
                 else:
                     alphabet = 'F'
-                print("( CPU betted",alphabet+str(cpu_bet+1),")")
+                print("( CPU betted", alphabet + str(cpu_bet + 1), ")")
                 return map, True, last_betting_point
             else:
                 if i == 5:
-
                     # 테스트용 코드
                     # print("Column "+str(cpu_bet+1)+" is already full. Please select another column.")   # 컴퓨터가 두려는 열이 꽉찼음을 출력
 
                     return map, False, last_betting_point
+
 
 # 착수할 열을 선택하고 착수 결과를 보여주는 함수
 def gameProgressing(map, turn, state):
@@ -85,7 +90,7 @@ def gameProgressing(map, turn, state):
     print("---------------------------------------")
     while not success_betting:
         map, success_betting, last_betting_point = betting(turn, map)
-    state.append(last_betting_point[1]+1)
+    state.append(last_betting_point[1] + 1)
     for i in range(6):
         for j in range(7):
             if map[i][j] == 1:
@@ -107,10 +112,11 @@ def gameProgressing(map, turn, state):
     print("You: ○ , CPU: ●")
 
     # 테스트용 코드
-    print("State: "+''.join(str(i) for i in state))    # 현재 state 보여주기
+    print("State: " + ''.join(str(i) for i in state))  # 현재 state 보여주기
 
     turn *= -1  # 턴 바꾸기
-    return map, turn, last_betting_point, state    # 맵, 누구턴인지, 마지막 착수점, state 리턴
+    return map, turn, last_betting_point, state  # 맵, 누구턴인지, 마지막 착수점, state 리턴
+
 
 # 특정 방향에 같은 수가 연속으로 몇개 존재하는지 찾아내는 함수
 def continuousBetting(map, last_betting_point, column_direction, row_direction, count):
@@ -124,7 +130,8 @@ def continuousBetting(map, last_betting_point, column_direction, row_direction, 
         return count
     else:
         next_checking_point = [next_column_address, next_row_address]
-        return continuousBetting(map, next_checking_point, column_direction, row_direction, count+1)
+        return continuousBetting(map, next_checking_point, column_direction, row_direction, count + 1)
+
 
 # 게임판이 꽉 찼는지 확인하는 함수
 def checkMapIsFull(map):
@@ -134,19 +141,23 @@ def checkMapIsFull(map):
                 return False
     return True
 
+
 # 게임오버 인지 확인하는 함수
 def gameOver(map, last_betting_point, turn):
     winner = None
-    if continuousBetting(map,last_betting_point,-1,0,0) + continuousBetting(map,last_betting_point,1,0,0) >= 3:
+    if continuousBetting(map, last_betting_point, -1, 0, 0) + continuousBetting(map, last_betting_point, 1, 0, 0) >= 3:
         winner = turn * -1
         return True, winner
-    elif continuousBetting(map,last_betting_point,0,-1,0) + continuousBetting(map,last_betting_point,0,1,0) >= 3:
+    elif continuousBetting(map, last_betting_point, 0, -1, 0) + continuousBetting(map, last_betting_point, 0, 1,
+                                                                                  0) >= 3:
         winner = turn * -1
         return True, winner
-    elif continuousBetting(map,last_betting_point,-1,1,0) + continuousBetting(map,last_betting_point,1,-1,0) >= 3:
+    elif continuousBetting(map, last_betting_point, -1, 1, 0) + continuousBetting(map, last_betting_point, 1, -1,
+                                                                                  0) >= 3:
         winner = turn * -1
         return True, winner
-    elif continuousBetting(map,last_betting_point,-1,-1,0) + continuousBetting(map,last_betting_point,1,1,0) >= 3:
+    elif continuousBetting(map, last_betting_point, -1, -1, 0) + continuousBetting(map, last_betting_point, 1, 1,
+                                                                                   0) >= 3:
         winner = turn * -1
         return True, winner
     elif checkMapIsFull(map):
@@ -155,11 +166,12 @@ def gameOver(map, last_betting_point, turn):
     else:
         return False, winner
 
+
 # 게임 실행 함수
 def startGame():
     # update.update_people_play(con, position='1A')
     # update.update_ai_play(con, position='1A')
-    #select_all_table(con)
+    # select_all_table(con)
 
     text_input = ''
     turn = 0
@@ -191,10 +203,10 @@ def startGame():
             break
         else:
             print("Wrong Input. Please try it again.")
-    while True: # 게임 진행 함수
+    while True:  # 게임 진행 함수
         map, turn, last_betting_point, state = gameProgressing(map, turn, state)
         game_over, winner = gameOver(map, last_betting_point, turn)
-        if game_over:   # 게임이 끝나면 누가 이겼는지 출력
+        if game_over:  # 게임이 끝나면 누가 이겼는지 출력
             print()
             print("---------------------------------------")
             print("-------------- Game Over --------------")
@@ -207,6 +219,7 @@ def startGame():
             print("---------------------------------------")
             print()
             break
+
 
 # 메인 함수
 game_continue = ''
