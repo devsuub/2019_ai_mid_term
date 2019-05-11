@@ -176,7 +176,7 @@ def minmax(turn):
                                                  result2[0][0][0][0][0][0])
     for i in range(1, 8):
         if result2[i][0][0][0][0][0] == result2[0][0][0][0][0][0]:
-            return i
+            return i-1
 
 
 def go_2_depth(con, originalTableName, i, j, map, turn):

@@ -6,7 +6,7 @@ from heuristic import heuristic
 from ruleBase import ruleBase
 from init import init
 
-con = sqlite3.connect(':memory:')
+con = sqlite3.connect(':memory:') # con정의하여 sqlite3 객체로 정의
 
 
 def select_all_table(con):
@@ -223,7 +223,7 @@ def startGame():
 
 # 메인 함수
 game_continue = ''
-init(con)
+init(con) # 이것으로 connectfour_1.py를 실행하면 init.py를 먼저 실행할 수 있게 한다.
 print()
 print("----------------------------------------")
 print("---- Artificial Intellgence Project ----")
