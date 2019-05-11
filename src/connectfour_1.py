@@ -5,61 +5,52 @@ from random import randint
 from heuristic import heuristic
 from ruleBase import ruleBase
 from init import init
-
 con = sqlite3.connect(':memory:')
 
-
-def select_all_table(con):
-    cur = con.cursor()
-    cur.execute("SELECT * FROM WINNING_LINE")
-    for row in cur:
-        print(row)
-
-
-# 선택한 열에 착수하는 함수
-def betting(turn, map):
-    human_bet = 0
-    last_betting_point = [-1] * 2
-    if turn == 1:  # 사람 차례
-        while human_bet != '1' and human_bet != '2' and human_bet != '3' and human_bet != '4' and human_bet != '5' and human_bet != '6' and human_bet != '7':
-            human_bet = input("Where do you want to bet? (1~7) : ")
-
-            # 테스트용 코드
-            # human_bet = str(randint(1, 7))    # 사람 차례에도 랜덤하게 두기
-
-            if human_bet != '1' and human_bet != '2' and human_bet != '3' and human_bet != '4' and human_bet != '5' and human_bet != '6' and human_bet != '7':
-                print("Wrong Input. Please try it again.")
+def startTurn(turn, board):
+    player_input = 0
+    prev_input = [-1] * 2
+    if turn == 1: #사람 차례일때
+        while player_input != '1' and player_input != '2' and player_input != '3' and player_input != '4' and player_input != '5' and player_input != '6' and player_input != '7':
+            player_input = input("플레이어 차례입니다. 두실 위치를 입력하세요 : ")
+            #
+            if player_input != '1' and player_input != '2' and player_input != '3' and player_input != '4' and player_input != '5' and player_input != '6' and player_input != '7':
+                print("그곳은 입력이 불가능해요.")
             else:
                 for i in range(6):
-                    if map[i][int(human_bet) - 1] == 0:
-                        map[i][int(human_bet) - 1] = 1
-                        last_betting_point[0] = i
-                        last_betting_point[1] = int(human_bet) - 1  # 마지막 착수점 저장
+                    if i == 0:
+                        alphabet = 'A'
+                    elif i == 1:
+                        alphabet = 'B'
+                    elif i == 2:
+                        alphabet = 'C'
+                    elif i == 3:
+                        alphabet = 'D'
+                    elif i == 4:
+                        alphabet = 'E'
+                    else:
+                        alphabet = 'F'
 
-                        # 테스트용 코드
-                        # print(last_betting_point)   # 마지막 착수점 출력
-                        return map, True, last_betting_point
+                    if board[i][int(player_input) - 1] == 0:
+                        board[i][int(player_input) - 1] = 1
+                        prev_input[0] = i
+                        prev_input[1] = int(player_input) - 1
+                        update.update_people_play(con, str(player_input) + alphabet)
+                        return board, True, prev_input
                     else:
                         if i == 5:
-                            print("Column " + human_bet + " is already full. Please select another column.")
-                            return map, False, last_betting_point
-    else:  # 컴퓨터 차례
-
-        # 테스트용 코드
-        # heuristic(con, map)
-        cpu_bet = ruleBase(map)
-        if (cpu_bet == -1):
-            cpu_bet = heuristic(con, map)  # 1~7열 사이에 랜덤하게 착수하기
-        # cpu_bet = 6   # 6열에만 수 두기
+                            print("Column " + player_input + " is already full. Please select another column.")
+                            return board, False, prev_input
+    else:  # 인공지능(?) 차례
+        ai_input = ruleBase(board)
+        if (ai_input == -1):
+            ai_input = heuristic(con, board)  # 휴리스틱 함수 사용
 
         for i in range(6):
-            if map[i][cpu_bet] == 0:
-                map[i][cpu_bet] = -1
-                last_betting_point[0] = i
-                last_betting_point[1] = cpu_bet
-
-                # 테스트용 코드
-                # print(last_betting_point)   # 마지막 착수점 출력
+            if board[i][ai_input] == 0:
+                board[i][ai_input] = -1
+                prev_input[0] = i
+                prev_input[1] = ai_input
 
                 if i == 0:
                     alphabet = 'A'
@@ -73,94 +64,91 @@ def betting(turn, map):
                     alphabet = 'E'
                 else:
                     alphabet = 'F'
-                print("( CPU betted", alphabet + str(cpu_bet + 1), ")")
-                return map, True, last_betting_point
+                print("( AI placed it on ", str(ai_input + 1)+alphabet, ")")
+                update.update_ai_play(con, str(ai_input + 1)+alphabet)
+                return board, True, prev_input
             else:
                 if i == 5:
-                    # 테스트용 코드
-                    # print("Column "+str(cpu_bet+1)+" is already full. Please select another column.")   # 컴퓨터가 두려는 열이 꽉찼음을 출력
+                    return board, False, prev_input
 
-                    return map, False, last_betting_point
-
-
-# 착수할 열을 선택하고 착수 결과를 보여주는 함수
-def gameProgressing(map, turn, state):
-    success_betting = False
-    dot = [['.'] * 7 for i in range(6)]
+def GameStatus(board, order, status):
+    finish_turn = False
+    coord = [['.'] * 7 for i in range(6)]
     print("---------------------------------------")
-    while not success_betting:
-        map, success_betting, last_betting_point = betting(turn, map)
-    state.append(last_betting_point[1] + 1)
+    while not finish_turn:
+        board, finish_turn, prev_coord = startTurn(order, board)
+    status.append(prev_coord[1] + 1)
     for i in range(6):
         for j in range(7):
-            if map[i][j] == 1:
-                dot[i][j] = '○'
-            elif map[i][j] == -1:
-                dot[i][j] = '●'
+            if board[i][j] == 1:
+                coord[i][j] = '★'
+            elif board[i][j] == -1:
+                coord[i][j] = '●'
             else:
-                dot[i][j] = '.'
+                coord[i][j] = '○'
     print()
-    print("# 1 2 3 4 5 6 7 #")
-    print('F', dot[5][0], dot[5][1], dot[5][2], dot[5][3], dot[5][4], dot[5][5], dot[5][6], '#')
-    print('E', dot[4][0], dot[4][1], dot[4][2], dot[4][3], dot[4][4], dot[4][5], dot[4][6], '#')
-    print('D', dot[3][0], dot[3][1], dot[3][2], dot[3][3], dot[3][4], dot[3][5], dot[3][6], '#')
-    print('C', dot[2][0], dot[2][1], dot[2][2], dot[2][3], dot[2][4], dot[2][5], dot[2][6], '#')
-    print('B', dot[1][0], dot[1][1], dot[1][2], dot[1][3], dot[1][4], dot[1][5], dot[1][6], '#')
-    print('A', dot[0][0], dot[0][1], dot[0][2], dot[0][3], dot[0][4], dot[0][5], dot[0][6], '#')
-    print("# # # # # # # # #")
+    print("* 1  2  3  4  5  6  7 *")
+    print("+ ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ+ ")
+    print('F', coord[5][0], coord[5][1], coord[5][2], coord[5][3], coord[5][4], coord[5][5], coord[5][6], '#')
+    print('E', coord[4][0], coord[4][1], coord[4][2], coord[4][3], coord[4][4], coord[4][5], coord[4][6], '#')
+    print('D', coord[3][0], coord[3][1], coord[3][2], coord[3][3], coord[3][4], coord[3][5], coord[3][6], '#')
+    print('C', coord[2][0], coord[2][1], coord[2][2], coord[2][3], coord[2][4], coord[2][5], coord[2][6], '#')
+    print('B', coord[1][0], coord[1][1], coord[1][2], coord[1][3], coord[1][4], coord[1][5], coord[1][6], '#')
+    print('A', coord[0][0], coord[0][1], coord[0][2], coord[0][3], coord[0][4], coord[0][5], coord[0][6], '#')
+    print("+ ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ+ ")
     print()
-    print("You: ○ , CPU: ●")
+    print("You: ★ , CPU: ●")
 
     # 테스트용 코드
-    print("State: " + ''.join(str(i) for i in state))  # 현재 state 보여주기
+    print("State: " + ''.join(str(i) for i in status))  # 현재 state 보여주기
 
-    turn *= -1  # 턴 바꾸기
-    return map, turn, last_betting_point, state  # 맵, 누구턴인지, 마지막 착수점, state 리턴
+    order *= -1  # 턴 바꾸기
+    return board, order, prev_coord, status  # 맵, 누구턴인지, 마지막 착수점, state 리턴
 
 
 # 특정 방향에 같은 수가 연속으로 몇개 존재하는지 찾아내는 함수
-def continuousBetting(map, last_betting_point, column_direction, row_direction, count):
-    column_address = last_betting_point[0]
-    row_address = last_betting_point[1]
+def countStoneInGames(board, prev_coord, column_direction, row_direction, count):
+    column_address = prev_coord[0]
+    row_address = prev_coord[1]
     next_column_address = column_address + column_direction
     next_row_address = row_address + row_direction
     if next_column_address < 0 or next_column_address > 5 or next_row_address < 0 or next_row_address > 6:
         return count
-    elif map[next_column_address][next_row_address] != map[column_address][row_address]:
+    elif board[next_column_address][next_row_address] != board[column_address][row_address]:
         return count
     else:
         next_checking_point = [next_column_address, next_row_address]
-        return continuousBetting(map, next_checking_point, column_direction, row_direction, count + 1)
+        return countStoneInGames(board, next_checking_point, column_direction, row_direction, count + 1)
 
 
 # 게임판이 꽉 찼는지 확인하는 함수
-def checkMapIsFull(map):
+def checkMapIsFull(board):
     for i in range(6):
         for j in range(7):
-            if map[i][j] == 0:
+            if board[i][j] == 0:
                 return False
     return True
 
 
 # 게임오버 인지 확인하는 함수
-def gameOver(map, last_betting_point, turn):
+def gameOver(board, prev_coord, order):
     winner = None
-    if continuousBetting(map, last_betting_point, -1, 0, 0) + continuousBetting(map, last_betting_point, 1, 0, 0) >= 3:
-        winner = turn * -1
+    if countStoneInGames(board, prev_coord, -1, 0, 0) + countStoneInGames(board, prev_coord, 1, 0, 0) >= 3:
+        winner = order * -1
         return True, winner
-    elif continuousBetting(map, last_betting_point, 0, -1, 0) + continuousBetting(map, last_betting_point, 0, 1,
-                                                                                  0) >= 3:
-        winner = turn * -1
+    elif countStoneInGames(board, prev_coord, 0, -1, 0) + countStoneInGames(board, prev_coord, 0, 1,
+                                                                            0) >= 3:
+        winner = order * -1
         return True, winner
-    elif continuousBetting(map, last_betting_point, -1, 1, 0) + continuousBetting(map, last_betting_point, 1, -1,
-                                                                                  0) >= 3:
-        winner = turn * -1
+    elif countStoneInGames(board, prev_coord, -1, 1, 0) + countStoneInGames(board, prev_coord, 1, -1,
+                                                                            0) >= 3:
+        winner = order * -1
         return True, winner
-    elif continuousBetting(map, last_betting_point, -1, -1, 0) + continuousBetting(map, last_betting_point, 1, 1,
-                                                                                   0) >= 3:
-        winner = turn * -1
+    elif countStoneInGames(board, prev_coord, -1, -1, 0) + countStoneInGames(board, prev_coord, 1, 1,
+                                                                             0) >= 3:
+        winner = order * -1
         return True, winner
-    elif checkMapIsFull(map):
+    elif checkMapIsFull(board):
         winner = 0
         return True, winner
     else:
@@ -169,90 +157,88 @@ def gameOver(map, last_betting_point, turn):
 
 # 게임 실행 함수
 def startGame():
-    # update.update_people_play(con, position='1A')
-    # update.update_ai_play(con, position='1A')
-    # select_all_table(con)
-
-    text_input = ''
-    turn = 0
-    map = [[0] * 7 for i in range(6)]
-    state = []
-    while text_input != 'F' and text_input != 'f' and text_input != 'S' and text_input != 's':
-        text_input = input("Will you go First or Second? (F/S) : ")
+    game_input = ''
+    order = 0
+    board = [[0] * 7 for i in range(6)]
+    status = []
+    while game_input != '1' and game_input != '2':
+        game_input = input("선공은 1, 후공은 2를 선택하세요 : ")
 
         # 테스트용 코드
-        # text_input = 'f'    # 무조건 선공하기
+        # game_input = '1'    # 무조건 선공하기
 
-        if text_input == 'F' or text_input == 'f':
+        if game_input == '1':
             print()
-            print("# 1 2 3 4 5 6 7 #")
-            print('F . . . . . . . #')
-            print('E . . . . . . . #')
-            print('D . . . . . . . #')
-            print('C . . . . . . . #')
-            print('B . . . . . . . #')
-            print('A . . . . . . . #')
-            print("# # # # # # # # #")
+            print("* 1 2 3 4 5 6 7  *")
+            print("+ - - - - - - - + ")
+            print('F ○○○○○○○ #')
+            print('E ○○○○○○○ #')
+            print('D ○○○○○○○ #')
+            print('C ○○○○○○○ #')
+            print('B ○○○○○○○ #')
+            print('A ○○○○○○○ #')
+            print("+ - - - - - - - + ")
             print()
-            print("You go First.")
-            turn = 1
+            print("플레이어 먼저 시작합니다")
+            order = 1
             break
-        elif text_input == 'S' or text_input == 's':
-            print("CPU go First.")
-            turn = -1
+        elif game_input == '2':
+            print("인공지능이 먼저 시작합니다")
+            order = -1
             break
         else:
-            print("Wrong Input. Please try it again.")
+            print("잘못 입력하셨습니다. 다시 선택하세요.")
     while True:  # 게임 진행 함수
-        map, turn, last_betting_point, state = gameProgressing(map, turn, state)
-        game_over, winner = gameOver(map, last_betting_point, turn)
+        board, order, prev_coord, status = GameStatus(board, order, status)
+        game_over, winner = gameOver(board, prev_coord, order)
         if game_over:  # 게임이 끝나면 누가 이겼는지 출력
             print()
             print("---------------------------------------")
-            print("-------------- Game Over --------------")
+            print("-------------- 게임 오버 --------------")
             if winner == 1:
-                print("--------------- You Win ---------------")
+                print("--------------- 승리 ---------------")
             elif winner == -1:
-                print("--------------- CPU Win ---------------")
+                print("--------------- 패배 ---------------")
             else:
-                print("---------------- Draw! ----------------")
+                print("---------------- 무승부! ----------------")
             print("---------------------------------------")
             print()
             break
 
 
 # 메인 함수
-game_continue = ''
+proceed_game = ''
 init(con)
 print()
-print("----------------------------------------")
-print("---- Artificial Intellgence Project ----")
-print("------------- Connect Four -------------")
-print("------------- Human vs CPU -------------")
-print("----------------------------------------")
+print("------------------------------------------")
+print("----커넥트 포 게임에 오신걸 환영합니다----")
+print("------------------------------------------")
+print("------------------------------------------")
+print("-------made by 김민섭 임재민 이정섭-------")
+print("------------------------------------------")
 print()
 startGame()
 
-while game_continue != 'Y' and game_continue != 'y' and game_continue != 'N' and game_continue != 'n':
-    game_continue = input("Do you want to restart the game? (Y/N) : ")
+while proceed_game != 'Y' and proceed_game != 'y' and proceed_game != 'N' and proceed_game != 'n':
+    proceed_game = input("Play Again? (Y/N) : ")
 
     # 테스트용 코드
     # game_continue = 'y' # 게임 무한 재실행
 
-    if game_continue == 'Y' or game_continue == 'y':
+    if proceed_game == 'Y' or proceed_game == 'y':
         print()
         print("----------------------------------------")
-        print("------------- Game Restart -------------")
+        print("------------- 게임 재개 -------------")
         print("----------------------------------------")
         print()
-        game_continue = ''
+        proceed_game = ''
         startGame()
-    elif game_continue == 'N' or game_continue == 'n':
+    elif proceed_game == 'N' or proceed_game == 'n':
         print()
         print("----------------------------------------")
-        print("-------- Game Engine Terminated --------")
+        print("-------- 게임 종료 --------")
         print("----------------------------------------")
         print()
         break
     else:
-        print("Wrong Input. Please try it again.")
+        print("잘못 입력하셨습니다. 다시 선택하세요")
