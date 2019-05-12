@@ -1,5 +1,3 @@
-winningLine = []
-
 def init_table(con):
     cur = con.cursor()
     cur.execute("DROP TABLE IF EXISTS WINNING_LINE;")

@@ -5,21 +5,20 @@ from random import randint
 from heuristic import heuristic
 from ruleBase import ruleBase
 from init import init
+con = sqlite3.connect(':memory:')
 
-con = sqlite3.connect(':memory:') # con정의하여 sqlite3 객체로 정의
-
-
-def startTurn(turn, board):
-    player_input = 0
+def startTurn(turn, board):     #게임 진행하기
+    player_input = 0            #플레이어 인풋 초기화
     prev_input = [-1] * 2
-    if turn == 1: #사람 차례일때
+    if turn == 1:
         while player_input != '1' and player_input != '2' and player_input != '3' and player_input != '4' and player_input != '5' and player_input != '6' and player_input != '7':
             player_input = input("플레이어 차례입니다. 두실 위치를 입력하세요 : ")
             #
             if player_input != '1' and player_input != '2' and player_input != '3' and player_input != '4' and player_input != '5' and player_input != '6' and player_input != '7':
-                print("그곳은 입력이 불가능해요.")
+                print("그곳에 두실 수 없습니다!")
             else:
                 for i in range(6):
+                    #판에 둘 위치 찾기
                     if i == 0:
                         alphabet = 'A'
                     elif i == 1:
@@ -43,10 +42,10 @@ def startTurn(turn, board):
                         if i == 5:
                             print("Column " + player_input + " is already full. Please select another column.")
                             return board, False, prev_input
-    else:  # 인공지능(?) 차례
-        ai_input = ruleBase(board)
+    else:
+        ai_input = ruleBase(board) #룰베이스에서 먼저 가져오기
         if (ai_input == -1):
-            ai_input = heuristic(con, board)  # 휴리스틱 함수 사용
+            ai_input = heuristic(con, board)  # 휴리스틱 함수 사용하여 AI 인풋 결정
 
         for i in range(6):
             if board[i][ai_input] == 0:
@@ -54,7 +53,7 @@ def startTurn(turn, board):
                 prev_input[0] = i
                 prev_input[1] = ai_input
 
-                if i == 0:
+                if i == 0: #위치
                     alphabet = 'A'
                 elif i == 1:
                     alphabet = 'B'
@@ -67,7 +66,7 @@ def startTurn(turn, board):
                 else:
                     alphabet = 'F'
                 print("( AI placed it on ", str(ai_input + 1)+alphabet, ")")
-                update.update_ai_play(con, str(ai_input + 1)+alphabet)
+                update.update_ai_play(con, str(ai_input + 1)+alphabet) #위닝라인 업데이트
                 return board, True, prev_input
             else:
                 if i == 5:
@@ -76,6 +75,7 @@ def startTurn(turn, board):
 def GameStatus(board, order, status):
     finish_turn = False
     coord = [['.'] * 7 for i in range(6)]
+
     print("---------------------------------------")
     while not finish_turn:
         board, finish_turn, prev_coord = startTurn(order, board)
@@ -88,6 +88,7 @@ def GameStatus(board, order, status):
                 coord[i][j] = '●'
             else:
                 coord[i][j] = '○'
+
     print()
     print("* 1  2  3  4  5  6  7 *")
     print("+ ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ+ ")
@@ -100,20 +101,18 @@ def GameStatus(board, order, status):
     print("+ ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ+ ")
     print()
     print("You: ★ , CPU: ●")
+    print("State: " + ''.join(str(i) for i in status))
 
-    # 테스트용 코드
-    print("State: " + ''.join(str(i) for i in status))  # 현재 state 보여주기
+    order *= -1
+    return board, order, prev_coord, status
 
-    order *= -1  # 턴 바꾸기
-    return board, order, prev_coord, status  # 맵, 누구턴인지, 마지막 착수점, state 리턴
-
-
-# 특정 방향에 같은 수가 연속으로 몇개 존재하는지 찾아내는 함수
 def countStoneInGames(board, prev_coord, column_direction, row_direction, count):
+
     column_address = prev_coord[0]
     row_address = prev_coord[1]
     next_column_address = column_address + column_direction
     next_row_address = row_address + row_direction
+
     if next_column_address < 0 or next_column_address > 5 or next_row_address < 0 or next_row_address > 6:
         return count
     elif board[next_column_address][next_row_address] != board[column_address][row_address]:
@@ -122,8 +121,6 @@ def countStoneInGames(board, prev_coord, column_direction, row_direction, count)
         next_checking_point = [next_column_address, next_row_address]
         return countStoneInGames(board, next_checking_point, column_direction, row_direction, count + 1)
 
-
-# 게임판이 꽉 찼는지 확인하는 함수
 def checkMapIsFull(board):
     for i in range(6):
         for j in range(7):
@@ -132,7 +129,6 @@ def checkMapIsFull(board):
     return True
 
 
-# 게임오버 인지 확인하는 함수
 def gameOver(board, prev_coord, order):
     winner = None
     if countStoneInGames(board, prev_coord, -1, 0, 0) + countStoneInGames(board, prev_coord, 1, 0, 0) >= 3:
@@ -157,17 +153,13 @@ def gameOver(board, prev_coord, order):
         return False, winner
 
 
-# 게임 실행 함수
-def startGame():
-    game_input = ''
-    order = 0
-    board = [[0] * 7 for i in range(6)]
-    status = []
+def startGame():    #게임시작함수
+    game_input = '' #게임인풋 초기화
+    order = 0       #순서 정하기위함
+    board = [[0] * 7 for i in range(6)]     #게임판
+    status = []                             #상태
     while game_input != '1' and game_input != '2':
         game_input = input("선공은 1, 후공은 2를 선택하세요 : ")
-
-        # 테스트용 코드
-        # game_input = '1'    # 무조건 선공하기
 
         if game_input == '1':
             print()
@@ -182,18 +174,18 @@ def startGame():
             print("+ - - - - - - - + ")
             print()
             print("플레이어 먼저 시작합니다")
-            order = 1
+            order = 1       #플레이어 먼저 순서
             break
         elif game_input == '2':
             print("인공지능이 먼저 시작합니다")
-            order = -1
+            order = -1      #AI 먼저 순서
             break
         else:
             print("잘못 입력하셨습니다. 다시 선택하세요.")
-    while True:  # 게임 진행 함수
+    while True:
         board, order, prev_coord, status = GameStatus(board, order, status)
         game_over, winner = gameOver(board, prev_coord, order)
-        if game_over:  # 게임이 끝나면 누가 이겼는지 출력
+        if game_over:
             print()
             print("---------------------------------------")
             print("-------------- 게임 오버 --------------")
@@ -207,12 +199,8 @@ def startGame():
             print()
             break
 
-
-# 메인 함수
-
-init(con) # 이것으로 connectfour_1.py를 실행하면 init.py를 먼저 실행할 수 있게 한다.
 proceed_game = ''
-
+init(con)
 print()
 print("------------------------------------------")
 print("----커넥트 포 게임에 오신걸 환영합니다----")
@@ -226,22 +214,19 @@ startGame()
 while proceed_game != 'Y' and proceed_game != 'y' and proceed_game != 'N' and proceed_game != 'n':
     proceed_game = input("Play Again? (Y/N) : ")
 
-    # 테스트용 코드
-    # game_continue = 'y' # 게임 무한 재실행
-
     if proceed_game == 'Y' or proceed_game == 'y':
         print()
         print("----------------------------------------")
-        print("------------- 게임 재개 -------------")
+        print("------------ 게임 다시 시작 ------------")
         print("----------------------------------------")
         print()
         proceed_game = ''
         startGame()
     elif proceed_game == 'N' or proceed_game == 'n':
         print()
-        print("----------------------------------------")
-        print("-------- 게임 종료 --------")
-        print("----------------------------------------")
+        print("————————————————————")
+        print("———— 게임 종료 ————")
+        print("————————————————————")
         print()
         break
     else:
