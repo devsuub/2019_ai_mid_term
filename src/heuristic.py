@@ -138,7 +138,7 @@ def heuristic(con, map):
                 list = minmax(0)
                 maxI = find_max(list)
 
-                if (loseValI == int(maxI) + 1):
+                if (int(loseValI) == int(maxI) + 1):
                     print("그러나 그다음수에 지는 경우가 발생하여서 위 값을 제외하고 다시 휴리스틱을 돌린 결과")
                     # minmax 했을때 지는 경우의 수에 두는경우
                     # 두번째로 큰값을 가져온다
@@ -162,6 +162,10 @@ def heuristic(con, map):
                             # del list[maxI]
                             list = set_trash_value(list, maxI)
                             maxI = find_max(list)
+                            if (int(loseValI) == int(maxI) + 1):
+                                print("그러나 그다음수에 지는 경우가 발생하여서 위 값을 제외하고 다시 휴리스틱을 돌린 결과")
+                                list = set_trash_value(list, maxI)
+                                maxI = find_max(list)
                         return maxI
                         break
                     else:
