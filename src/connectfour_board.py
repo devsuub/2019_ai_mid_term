@@ -14,9 +14,7 @@ def startTurn(turn, board):     #게임 진행하기
             while player_input != '1' and player_input != '2' and player_input != '3' and player_input != '4' and player_input != '5' and player_input != '6' and player_input != '7':
                 player_input = input("플레이어 차례입니다. 두실 위치를 입력하세요 : ")
                 #
-                if player_input != '1' and player_input != '2' and player_input != '3' and player_input != '4' and player_input != '5' and player_input != '6' and player_input != '7':
-                    print("그곳에 두실 수 없습니다!")
-                elif player_input == 'DUMP':
+                if player_input == 'DUMP':
                     ## DUMP
                     print(board)
 
@@ -26,6 +24,10 @@ def startTurn(turn, board):     #게임 진행하기
                             if line.startswith('INSERT INTO "WINNING_LINE"'):
                                 f.write('%s\n' % line)
                         f.close
+
+                elif player_input != '1' and player_input != '2' and player_input != '3' and player_input != '4' and player_input != '5' and player_input != '6' and player_input != '7':
+                    print("그곳에 두실 수 없습니다!")
+
                 else:
                     for i in range(6):
                         #판에 둘 위치 찾기

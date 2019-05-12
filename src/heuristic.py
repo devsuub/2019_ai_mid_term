@@ -1,13 +1,11 @@
 import copy
-import time
 import numpy as np
-import random
 
-loseValI = -1000
-loseValJ = -1000
+loseVal = []
 result = np.zeros((8, 8, 8, 8, 8, 8))
 
 def find_next_row(col, map):
+
     for i in range(6):
         if (map[i][col - 1] == 0):
             return chr(65 + i)
@@ -19,7 +17,7 @@ def find_max(list):
     secondMaxI = list.index(secondMaxValue)
     print(list)
     print("위 휴리스틱 값들이 나와서")
-    print(secondMaxValue, " 를 골라 ", secondMaxI, "에 놓습니다.")
+    print(secondMaxValue, " 를 골라 ", int(secondMaxI)+1, "에 놓습니다.")
     return secondMaxI
 
 def set_trash_value(list, i):
@@ -52,8 +50,8 @@ def check_win(con, map, tableName):
 
         if (count == 4):
             print("이기수확인")
-
             return True
+            break
 
 
 def check_lose(con, map, tableName):
@@ -76,11 +74,11 @@ def check_lose(con, map, tableName):
         if (count == 4):
             print("지는수확인")
             return True
+            break
 
 
 def heuristic(con, map):
-    global loseValI
-    global loseValJ
+    global loseVal
     global result
     result = np.zeros((8, 8, 8, 8, 8, 8))
     ## init
@@ -92,9 +90,9 @@ def heuristic(con, map):
                         for n in range(1, 8):
                             result[i][j][k][l][m][n] = -2000
 
-    loseValI = -1000
-    loseValJ = -1000
-
+    # loseValI = -1000
+    # loseValJ = -1000
+    loseVal = []
 
     ## 1depth
     for i in range(1, 8):
@@ -127,44 +125,60 @@ def heuristic(con, map):
 
         sql = "DROP TABLE IF EXISTS " + tableName + ";"
         cur.execute(sql)
+    print('lllloooose', len(loseVal))
 
 
-    if (loseValJ != -1000) and (loseValI != -1000):
-        if (loseValI == loseValJ):
-            # i를 놓아서 지는 경우
-            list = minmax(0)
-            maxI =  find_max(list)
+    if (len(loseVal) != 0):
+        for i in range(len(loseVal)):
+            loseValI = loseVal[i].split(',')[0]
+            loseValJ = loseVal[i].split(',')[1]
+            print(loseValI, loseValJ)
+            if (loseValI == loseValJ):
+                # i를 놓아서 지는 경우
+                list = minmax(0)
+                maxI = find_max(list)
 
-            if (loseValI == maxI):
-                print("그러나 그다음수에 지는 경우가 발생하여서 위 값을 제외하고 다시 휴리스틱을 돌린 결과")
-                # minmax 했을때 지는 경우의 수에 두는경우
-                # 두번째로 큰값을 가져온다
-                # del list[maxI]
-                list = set_trash_value(list, maxI)
-                secondMaxI = find_max(list)
-
-                while (find_row_full(map, secondMaxI)):
-                    print("그러나 해당 row가 꽉차서 다시 휴리스틱을 돌린 결과")
-                    # del list[secondMaxI]
-                    list = set_trash_value(list, secondMaxI)
-                    secondMaxI = find_max(list)
-                return secondMaxI
-
-            else:
-
-                while (find_row_full(map, maxI)):
-                    print("그러나 해당 row가 꽉차서 다시 휴리스틱을 돌린 결과")
+                if (loseValI == int(maxI) + 1):
+                    print("그러나 그다음수에 지는 경우가 발생하여서 위 값을 제외하고 다시 휴리스틱을 돌린 결과")
+                    # minmax 했을때 지는 경우의 수에 두는경우
+                    # 두번째로 큰값을 가져온다
                     # del list[maxI]
                     list = set_trash_value(list, maxI)
-                    maxI = find_max(list)
-                return maxI
+                    secondMaxI = find_max(list)
 
-        else:  # 방어
-            print("방어합니다")
-            next = loseValJ - 1
-            # while (find_row_full(map, next)):
-            #     next = random.randrange(1, 8)
-            return next
+                    while (find_row_full(map, secondMaxI)):
+                        print("그러나 해당 row가 꽉차서 다시 휴리스틱을 돌린 결과")
+                        # del list[secondMaxI]
+                        list = set_trash_value(list, secondMaxI)
+                        secondMaxI = find_max(list)
+                    return secondMaxI
+                    break
+
+                else:
+                    print('hi')
+                    if (i == int(len(loseVal)) - 1):
+                        while (find_row_full(map, maxI)):
+                            print("그러나 해당 row가 꽉차서 다시 휴리스틱을 돌린 결과")
+                            # del list[maxI]
+                            list = set_trash_value(list, maxI)
+                            maxI = find_max(list)
+                        return maxI
+                        break
+                    else:
+                        print('hi2')
+                        continue
+
+            else:  # 방어
+                print(loseValJ, 'hiiii')
+                next = int(loseValJ) - 1
+                print('next', next)
+                if (find_row_full(map, next)):
+                    continue
+                else:
+                    print("방어합니다")
+                    return next
+                    break
+        print('end')
     else:
         list = minmax(0)
 
@@ -182,8 +196,7 @@ def heuristic(con, map):
 
 
 def go_2_depth(con, originalTableName, i, j, map, turn):
-    global loseValI
-    global loseValJ
+    global loseVal
     nextRow = find_next_row(j, map)
     if (nextRow != -1):  # row 안꽉찼을경우
         cur = con.cursor()
@@ -201,10 +214,10 @@ def go_2_depth(con, originalTableName, i, j, map, turn):
 
         tempMap = copy.deepcopy(map)
         tempMap[ord(nextRow) - 65][j - 1] = 1
-        if (loseValJ == -1000) and (loseValI == -1000):
-            if (check_lose(con, tempMap, tableName)):
-                loseValJ = j
-                loseValI = i
+        if (check_lose(con, tempMap, tableName)):
+            loseVal.append(str(i) + "," + str(j))
+            print('lose append', len(loseVal))
+
 
         for k in range(1, 8):
             go_3_depth(con, tableName, i, j, k, tempMap, 0)
