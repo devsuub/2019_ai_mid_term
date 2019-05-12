@@ -4,15 +4,14 @@ import numpy as np
 loseVal = []
 result = np.zeros((8, 8, 8, 8, 8, 8))
 
-def find_next_row(col, map):
+def find_next_row(col, board):
 
     for i in range(6):
-        if (map[i][col - 1] == 0):
+        if (board[i][col - 1] == 0):
             return chr(65 + i)
     return -1
 
 def find_max(list):
-
     secondMaxValue = max(list)
     secondMaxI = list.index(secondMaxValue)
     print(list)
@@ -24,13 +23,13 @@ def set_trash_value(list, i):
     list[i] = -1000
     return list
 
-def find_row_full(map, row):
-    if (map[5][row] != 0):
+def find_row_full(board, row):
+    if (board[5][row] != 0):
         return True
     else:
         return False
 
-def check_win(con, map, tableName):
+def check_win(con, board, tableName):
     # WININING 확인
     cur = con.cursor()
     sql = "SELECT LINE FROM " + tableName + " WHERE AI = 1;"
@@ -39,22 +38,21 @@ def check_win(con, map, tableName):
        # print(row[0])
         splitLine = list(row[0])
         count = 0
-        if (map[ord(splitLine[1])-65][int(splitLine[0])-1] == -1):
+        if (board[ord(splitLine[1])-65][int(splitLine[0])-1] == -1):
             count = count + 1
-        if (map[ord(splitLine[3])-65][int(splitLine[2])-1] == -1):
+        if (board[ord(splitLine[3])-65][int(splitLine[2])-1] == -1):
             count = count + 1
-        if (map[ord(splitLine[5])-65][int(splitLine[4])-1] == -1):
+        if (board[ord(splitLine[5])-65][int(splitLine[4])-1] == -1):
             count = count + 1
-        if (map[ord(splitLine[7])-65][int(splitLine[6])-1] == -1):
+        if (board[ord(splitLine[7])-65][int(splitLine[6])-1] == -1):
             count = count + 1
 
         if (count == 4):
-            print("이기수확인")
             return True
             break
 
 
-def check_lose(con, map, tableName):
+def check_lose(con, board, tableName):
     # WININING 확인
     cur = con.cursor()
     sql = "SELECT LINE FROM " + tableName + " WHERE PLAYER = 1;"
@@ -63,21 +61,20 @@ def check_lose(con, map, tableName):
        # print(row[0])
         splitLine = list(row[0])
         count = 0
-        if (map[ord(splitLine[1]) - 65][int(splitLine[0]) - 1] == 1):
+        if (board[ord(splitLine[1]) - 65][int(splitLine[0]) - 1] == 1):
             count = count + 1
-        if (map[ord(splitLine[3]) - 65][int(splitLine[2]) - 1] == 1):
+        if (board[ord(splitLine[3]) - 65][int(splitLine[2]) - 1] == 1):
             count = count + 1
-        if (map[ord(splitLine[5]) - 65][int(splitLine[4]) - 1] == 1):
+        if (board[ord(splitLine[5]) - 65][int(splitLine[4]) - 1] == 1):
             count = count + 1
-        if (map[ord(splitLine[7]) - 65][int(splitLine[6]) - 1] == 1):
+        if (board[ord(splitLine[7]) - 65][int(splitLine[6]) - 1] == 1):
             count = count + 1
         if (count == 4):
-            print("지는수확인")
             return True
             break
 
 
-def heuristic(con, map):
+def heuristic(con, board):
     global loseVal
     global result
     result = np.zeros((8, 8, 8, 8, 8, 8))
@@ -101,16 +98,16 @@ def heuristic(con, map):
         cur = con.cursor()
         cur.execute(sql)
         # 다음수 넣기
-        nextRow = find_next_row(i, map)
+        nextRow = find_next_row(i, board)
         if (nextRow != -1):  # row 안꽉찼을경우
             sql = "UPDATE " + tableName + " SET PLAYER = 0 WHERE LINE LIKE :position"
             cur.execute(sql, {"position": "%" + str(i) + nextRow + "%"})
             con.commit()
             result[i][0][0][0][0][0] = calculate_heuristic(con, tableName)
-            # map 복사
-            tempMap = copy.deepcopy(map)
-            tempMap[ord(nextRow) - 65][i - 1] = -1
-            if (check_win(con, tempMap, tableName)):
+            # board 복사
+            tempBoard = copy.deepcopy(board)
+            tempBoard[ord(nextRow) - 65][i - 1] = -1
+            if (check_win(con, tempBoard, tableName)):
                 ## 4개가 이어지는 경우
                 sql = "DROP TABLE IF EXISTS " + tableName + ";"
                 cur.execute(sql)
@@ -119,14 +116,14 @@ def heuristic(con, map):
             else:
                 # 2depth
                 for j in range(1, 8):
-                    print(i,j)
-                    go_2_depth(con, tableName, i, j, tempMap, 1)
+                    go_2_depth(con, tableName, i, j, tempBoard, 1)
 
-
+        if (i != 7):
+            print(i*13, '% 완료')
+        else:
+            print("90  % 완료")
         sql = "DROP TABLE IF EXISTS " + tableName + ";"
         cur.execute(sql)
-    print('lllloooose', len(loseVal))
-
 
     if (len(loseVal) != 0):
         for i in range(len(loseVal)):
@@ -146,7 +143,7 @@ def heuristic(con, map):
                     list = set_trash_value(list, maxI)
                     secondMaxI = find_max(list)
 
-                    while (find_row_full(map, secondMaxI)):
+                    while (find_row_full(board, secondMaxI)):
                         print("그러나 해당 row가 꽉차서 다시 휴리스틱을 돌린 결과")
                         # del list[secondMaxI]
                         list = set_trash_value(list, secondMaxI)
@@ -155,9 +152,8 @@ def heuristic(con, map):
                     break
 
                 else:
-                    print('hi')
                     if (i == int(len(loseVal)) - 1):
-                        while (find_row_full(map, maxI)):
+                        while (find_row_full(board, maxI)):
                             print("그러나 해당 row가 꽉차서 다시 휴리스틱을 돌린 결과")
                             # del list[maxI]
                             list = set_trash_value(list, maxI)
@@ -169,28 +165,23 @@ def heuristic(con, map):
                         return maxI
                         break
                     else:
-                        print('hi2')
                         continue
 
             else:  # 방어
-                print(loseValJ, 'hiiii')
                 next = int(loseValJ) - 1
-                print('next', next)
-                if (find_row_full(map, next)):
+                if (find_row_full(board, next)):
                     continue
                 else:
                     print("방어합니다")
                     return next
                     break
-        print('end')
     else:
         list = minmax(0)
 
         maxI = find_max(list)
 
-        while (find_row_full(map, maxI)):
+        while (find_row_full(board, maxI)):
             print("그러나 해당 row가 꽉차서 다시 휴리스틱을 돌린 결과")
-
             # del list[maxI]
             list = set_trash_value(list, maxI)
             maxI = find_max(list)
@@ -199,9 +190,9 @@ def heuristic(con, map):
 
 
 
-def go_2_depth(con, originalTableName, i, j, map, turn):
+def go_2_depth(con, originalTableName, i, j, board, turn):
     global loseVal
-    nextRow = find_next_row(j, map)
+    nextRow = find_next_row(j, board)
     if (nextRow != -1):  # row 안꽉찼을경우
         cur = con.cursor()
         tableName = "WINNING_LINE" + str(i) + str(j)
@@ -216,22 +207,20 @@ def go_2_depth(con, originalTableName, i, j, map, turn):
 
         result[i][j][0][0][0][0] = calculate_heuristic(con, tableName)
 
-        tempMap = copy.deepcopy(map)
-        tempMap[ord(nextRow) - 65][j - 1] = 1
-        if (check_lose(con, tempMap, tableName)):
+        tempBoard = copy.deepcopy(board)
+        tempBoard[ord(nextRow) - 65][j - 1] = 1
+        if (check_lose(con, tempBoard, tableName)):
             loseVal.append(str(i) + "," + str(j))
-            print('lose append', len(loseVal))
-
 
         for k in range(1, 8):
-            go_3_depth(con, tableName, i, j, k, tempMap, 0)
+            go_3_depth(con, tableName, i, j, k, tempBoard, 0)
 
         sql = "DROP TABLE IF EXISTS " + tableName + ";"
         cur.execute(sql)
 
 
-def go_3_depth(con, originalTableName, i, j, k, map, turn):
-    nextRow = find_next_row(k, map)
+def go_3_depth(con, originalTableName, i, j, k, board, turn):
+    nextRow = find_next_row(k, board)
     if (nextRow != -1):  # row 안꽉찼을경우
         cur = con.cursor()
         tableName = "WINNING_LINE" + str(i) + str(j) + str(k)
@@ -246,17 +235,17 @@ def go_3_depth(con, originalTableName, i, j, k, map, turn):
 
         result[i][j][k][0][0][0] = calculate_heuristic(con, tableName)
 
-        tempMap = copy.deepcopy(map)
-        tempMap[ord(nextRow) - 65][k - 1] = -1
+        tempBoard = copy.deepcopy(board)
+        tempBoard[ord(nextRow) - 65][k - 1] = -1
         for l in range(1, 8):
-            go_4_depth(con, tableName, i, j, k, l, tempMap, 1)
+            go_4_depth(con, tableName, i, j, k, l, tempBoard, 1)
 
         sql = "DROP TABLE IF EXISTS " + tableName + ";"
         cur.execute(sql)
 
 
-def go_4_depth(con, originalTableName, i, j, k, l, map, turn):
-    nextRow = find_next_row(l, map)
+def go_4_depth(con, originalTableName, i, j, k, l, board, turn):
+    nextRow = find_next_row(l, board)
     if (nextRow != -1):  # row 안꽉찼을경우
         cur = con.cursor()
         tableName = "WINNING_LINE" + str(i) + str(j) + str(k) + str(l)
@@ -271,17 +260,17 @@ def go_4_depth(con, originalTableName, i, j, k, l, map, turn):
 
         result[i][j][k][l][0][0] = calculate_heuristic(con, tableName)
 
-        tempMap = copy.deepcopy(map)
-        tempMap[ord(nextRow) - 65][l - 1] = 1
+        tempBoard = copy.deepcopy(board)
+        tempBoard[ord(nextRow) - 65][l - 1] = 1
         for m in range(1, 8):
-            go_5_depth(con, tableName, i, j, k, l, m, tempMap, 0)
+            go_5_depth(con, tableName, i, j, k, l, m, tempBoard, 0)
 
         sql = "DROP TABLE IF EXISTS " + tableName + ";"
         cur.execute(sql)
 
 
-def go_5_depth(con, originalTableName, i, j, k, l, m, map, turn):
-    nextRow = find_next_row(m, map)
+def go_5_depth(con, originalTableName, i, j, k, l, m, board, turn):
+    nextRow = find_next_row(m, board)
     if (nextRow != -1):  # row 안꽉찼을경우
         cur = con.cursor()
         tableName = "WINNING_LINE" + str(i) + str(j) + str(k) + str(l) + str(m)
@@ -296,17 +285,17 @@ def go_5_depth(con, originalTableName, i, j, k, l, m, map, turn):
 
         result[i][j][k][l][m][0] = calculate_heuristic(con, tableName)
 
-        tempMap = copy.deepcopy(map)
-        tempMap[ord(nextRow) - 65][m - 1] = -1
+        tempBoard = copy.deepcopy(board)
+        tempBoard[ord(nextRow) - 65][m - 1] = -1
         for n in range(1, 8):
-            go_6_depth(con, tableName, i, j, k, l, m, n, tempMap, 1)
+            go_6_depth(con, tableName, i, j, k, l, m, n, tempBoard, 1)
 
         sql = "DROP TABLE IF EXISTS " + tableName + ";"
         cur.execute(sql)
 
 
-def go_6_depth(con, originalTableName, i, j, k, l, m, n, map, turn):
-    nextRow = find_next_row(n, map)
+def go_6_depth(con, originalTableName, i, j, k, l, m, n, board, turn):
+    nextRow = find_next_row(n, board)
     if (nextRow != -1):  # row 안꽉찼을경우
         cur = con.cursor()
         tableName = "WINNING_LINE" + str(i) + str(j) + str(k) + str(l) + str(m) + str(n)

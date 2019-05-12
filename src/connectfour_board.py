@@ -1,36 +1,60 @@
-# Import
 import sqlite3
 import update
 from heuristic import heuristic
 from ruleBase import ruleBase
 from init import init
 con = sqlite3.connect(':memory:')
+player_first = 1
+
 
 def startTurn(turn, board):     #게임 진행하기
+    global player_first
     try:
         player_input = 0            #플레이어 인풋 초기화
         prev_input = [-1] * 2
-        if turn == 1:
-            while player_input != '1' and player_input != '2' and player_input != '3' and player_input != '4' and player_input != '5' and player_input != '6' and player_input != '7':
-                player_input = input("플레이어 차례입니다. 두실 위치를 입력하세요 : ")
+        if turn == 1:  # 사람 차례일때
+            if player_first == 1:
+                while player_input != '1' and player_input != '2' and player_input != '3' and player_input != '4' and player_input != '5' and player_input != '6' and player_input != '7':
+                    player_input = input("플레이어 차례입니다. 두실 위치를 입력하세요 : ")
+                    #
+                    if player_input == '4':
+                        print("첫수는 가운데 입력이 불가능해요.")
+                        player_input = 0
+                        player_first = 1
+                    else:
+                        for i in range(6):
+                            if i == 0:
+                                alphabet = 'A'
+                            elif i == 1:
+                                alphabet = 'B'
+                            elif i == 2:
+                                alphabet = 'C'
+                            elif i == 3:
+                                alphabet = 'D'
+                            elif i == 4:
+                                alphabet = 'E'
+                            else:
+                                alphabet = 'F'
+
+                            if board[i][int(player_input) - 1] == 0:
+                                board[i][int(player_input) - 1] = 1
+                                prev_input[0] = i
+                                prev_input[1] = int(player_input) - 1
+                                player_first = 0
+                                update.update_people_play(con, str(player_input) + alphabet)
+                                return board, True, prev_input
+                            else:
+                                if i == 5:
+                                    print("해당컬럼은 꽉찼습니다. 다시 입력해주세요")
+                                    return board, False, prev_input
+            if player_first != 1:
+                while player_input != '1' and player_input != '2' and player_input != '3' and player_input != '4' and player_input != '5' and player_input != '6' and player_input != '7':
+                    player_input = input("플레이어 차례입니다. 두실 위치를 입력하세요 : ")
                 #
-                if player_input == 'DUMP':
-                    ## DUMP
-                    print(board)
-
-                    with open('dump.sql', 'w') as f:
-                        f.write("===========================================================\n")
-                        for line in con.iterdump():
-                            if line.startswith('INSERT INTO "WINNING_LINE"'):
-                                f.write('%s\n' % line)
-                        f.close
-
-                elif player_input != '1' and player_input != '2' and player_input != '3' and player_input != '4' and player_input != '5' and player_input != '6' and player_input != '7':
-                    print("그곳에 두실 수 없습니다!")
-
+                if player_input != '1' and player_input != '2' and player_input != '3' and player_input != '4' and player_input != '5' and player_input != '6' and player_input != '7':
+                    print("그곳은 입력이 불가능해요.")
                 else:
                     for i in range(6):
-                        #판에 둘 위치 찾기
                         if i == 0:
                             alphabet = 'A'
                         elif i == 1:
@@ -53,9 +77,11 @@ def startTurn(turn, board):     #게임 진행하기
                         else:
                             if i == 5:
                                 print("Column " + player_input + " is already full. Please select another column.")
+                                player_first = 0
                                 return board, False, prev_input
         else:
             ai_input = ruleBase(board) #룰베이스에서 먼저 가져오기
+            player_first = 0
             if (ai_input == -1):
                 ai_input = heuristic(con, board)  # 휴리스틱 함수 사용하여 AI 인풋 결정
 
@@ -89,7 +115,7 @@ def startTurn(turn, board):     #게임 진행하기
         print(board)
 
         with open('dump.sql', 'w') as f:
-            f.write("===========================================================\n")
+            f.write("**************************")
             for line in con.iterdump():
                 if line.startswith('INSERT INTO "WINNING_LINE"'):
                     f.write('%s\n' % line)
@@ -99,7 +125,7 @@ def GameStatus(board, order, status):
     finish_turn = False
     coord = [['.'] * 7 for i in range(6)]
 
-    print("---------------------------------------")
+    print("***************************************")
     while not finish_turn:
         board, finish_turn, prev_coord = startTurn(order, board)
     status.append(prev_coord[1] + 1)
@@ -124,7 +150,7 @@ def GameStatus(board, order, status):
     print('A', coord[0][0], coord[0][1], coord[0][2], coord[0][3], coord[0][4], coord[0][5], coord[0][6], '#')
     print("+ ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ+ ")
     print()
-    print("You: ★ , CPU: ●")
+    print("Player: ★ , AI: ●")
     print("State: " + ''.join(str(i) for i in status))
 
     order *= -1
@@ -178,6 +204,15 @@ def gameOver(board, prev_coord, order):
 
 
 def startGame():    #게임시작함수
+    init(con)
+    print()
+    print("******************************************")
+    print("****커넥트 포 게임에 오신걸 환영합니다****")
+    print("******************************************")
+    print("******************************************")
+    print("*****made by 김민섭 임재민 이정섭******")
+    print("******************************************")
+    print()
     game_input = '' #게임인풋 초기화
     order = 0       #순서 정하기위함
     board = [[0] * 7 for i in range(6)]     #게임판
@@ -210,48 +245,18 @@ def startGame():    #게임시작함수
         board, order, prev_coord, status = GameStatus(board, order, status)
         game_over, winner = gameOver(board, prev_coord, order)
         if game_over:
-            print()
-            print("---------------------------------------")
-            print("-------------- 게임 오버 --------------")
+            print("******************************************")
+            print("************* 게임 오버 *************")
             if winner == 1:
-                print("--------------- 승리 ---------------")
+                print("************* 승리 *************")
             elif winner == -1:
-                print("--------------- 패배 ---------------")
+                print("************* 패배 *************")
             else:
-                print("---------------- 무승부! ----------------")
-            print("---------------------------------------")
+                print("************* 무승부 *************")
+            print("******************************************")
             print()
             break
 
-proceed_game = ''
-init(con)
-print()
-print("------------------------------------------")
-print("----커넥트 포 게임에 오신걸 환영합니다----")
-print("------------------------------------------")
-print("------------------------------------------")
-print("-------made by 김민섭 임재민 이정섭-------")
-print("------------------------------------------")
-print()
+
 startGame()
 
-while proceed_game != 'Y' and proceed_game != 'y' and proceed_game != 'N' and proceed_game != 'n':
-    proceed_game = input("Play Again? (Y/N) : ")
-
-    if proceed_game == 'Y' or proceed_game == 'y':
-        print()
-        print("----------------------------------------")
-        print("------------ 게임 다시 시작 ------------")
-        print("----------------------------------------")
-        print()
-        proceed_game = ''
-        startGame()
-    elif proceed_game == 'N' or proceed_game == 'n':
-        print()
-        print("————————————————————")
-        print("———— 게임 종료 ————")
-        print("————————————————————")
-        print()
-        break
-    else:
-        print("잘못 입력하셨습니다. 다시 선택하세요")
