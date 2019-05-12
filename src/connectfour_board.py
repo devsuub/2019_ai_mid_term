@@ -1,25 +1,69 @@
 # Import
 import sqlite3
 import update
-from random import randint
 from heuristic import heuristic
 from ruleBase import ruleBase
 from init import init
 con = sqlite3.connect(':memory:')
 
 def startTurn(turn, board):     #게임 진행하기
-    player_input = 0            #플레이어 인풋 초기화
-    prev_input = [-1] * 2
-    if turn == 1:
-        while player_input != '1' and player_input != '2' and player_input != '3' and player_input != '4' and player_input != '5' and player_input != '6' and player_input != '7':
-            player_input = input("플레이어 차례입니다. 두실 위치를 입력하세요 : ")
-            #
-            if player_input != '1' and player_input != '2' and player_input != '3' and player_input != '4' and player_input != '5' and player_input != '6' and player_input != '7':
-                print("그곳에 두실 수 없습니다!")
-            else:
-                for i in range(6):
-                    #판에 둘 위치 찾기
-                    if i == 0:
+    try:
+        player_input = 0            #플레이어 인풋 초기화
+        prev_input = [-1] * 2
+        if turn == 1:
+            while player_input != '1' and player_input != '2' and player_input != '3' and player_input != '4' and player_input != '5' and player_input != '6' and player_input != '7':
+                player_input = input("플레이어 차례입니다. 두실 위치를 입력하세요 : ")
+                #
+                if player_input != '1' and player_input != '2' and player_input != '3' and player_input != '4' and player_input != '5' and player_input != '6' and player_input != '7':
+                    print("그곳에 두실 수 없습니다!")
+                elif player_input == 'DUMP':
+                    ## DUMP
+                    print(board)
+
+                    with open('dump.sql', 'w') as f:
+                        f.write("===========================================================\n")
+                        for line in con.iterdump():
+                            if line.startswith('INSERT INTO "WINNING_LINE"'):
+                                f.write('%s\n' % line)
+                        f.close
+                else:
+                    for i in range(6):
+                        #판에 둘 위치 찾기
+                        if i == 0:
+                            alphabet = 'A'
+                        elif i == 1:
+                            alphabet = 'B'
+                        elif i == 2:
+                            alphabet = 'C'
+                        elif i == 3:
+                            alphabet = 'D'
+                        elif i == 4:
+                            alphabet = 'E'
+                        else:
+                            alphabet = 'F'
+
+                        if board[i][int(player_input) - 1] == 0:
+                            board[i][int(player_input) - 1] = 1
+                            prev_input[0] = i
+                            prev_input[1] = int(player_input) - 1
+                            update.update_people_play(con, str(player_input) + alphabet)
+                            return board, True, prev_input
+                        else:
+                            if i == 5:
+                                print("Column " + player_input + " is already full. Please select another column.")
+                                return board, False, prev_input
+        else:
+            ai_input = ruleBase(board) #룰베이스에서 먼저 가져오기
+            if (ai_input == -1):
+                ai_input = heuristic(con, board)  # 휴리스틱 함수 사용하여 AI 인풋 결정
+
+            for i in range(6):
+                if board[i][ai_input] == 0:
+                    board[i][ai_input] = -1
+                    prev_input[0] = i
+                    prev_input[1] = ai_input
+
+                    if i == 0: #위치
                         alphabet = 'A'
                     elif i == 1:
                         alphabet = 'B'
@@ -32,45 +76,22 @@ def startTurn(turn, board):     #게임 진행하기
                     else:
                         alphabet = 'F'
 
-                    if board[i][int(player_input) - 1] == 0:
-                        board[i][int(player_input) - 1] = 1
-                        prev_input[0] = i
-                        prev_input[1] = int(player_input) - 1
-                        update.update_people_play(con, str(player_input) + alphabet)
-                        return board, True, prev_input
-                    else:
-                        if i == 5:
-                            print("Column " + player_input + " is already full. Please select another column.")
-                            return board, False, prev_input
-    else:
-        ai_input = ruleBase(board) #룰베이스에서 먼저 가져오기
-        if (ai_input == -1):
-            ai_input = heuristic(con, board)  # 휴리스틱 함수 사용하여 AI 인풋 결정
-
-        for i in range(6):
-            if board[i][ai_input] == 0:
-                board[i][ai_input] = -1
-                prev_input[0] = i
-                prev_input[1] = ai_input
-
-                if i == 0: #위치
-                    alphabet = 'A'
-                elif i == 1:
-                    alphabet = 'B'
-                elif i == 2:
-                    alphabet = 'C'
-                elif i == 3:
-                    alphabet = 'D'
-                elif i == 4:
-                    alphabet = 'E'
+                    print("( AI placed it on ", str(ai_input + 1)+alphabet, ")")
+                    update.update_ai_play(con, str(ai_input + 1)+alphabet) #위닝라인 업데이트
+                    return board, True, prev_input
                 else:
-                    alphabet = 'F'
-                print("( AI placed it on ", str(ai_input + 1)+alphabet, ")")
-                update.update_ai_play(con, str(ai_input + 1)+alphabet) #위닝라인 업데이트
-                return board, True, prev_input
-            else:
-                if i == 5:
-                    return board, False, prev_input
+                    if i == 5:
+                        return board, False, prev_input
+    except:
+        print("ERROR 발생")
+        print(board)
+
+        with open('dump.sql', 'w') as f:
+            f.write("===========================================================\n")
+            for line in con.iterdump():
+                if line.startswith('INSERT INTO "WINNING_LINE"'):
+                    f.write('%s\n' % line)
+            f.close
 
 def GameStatus(board, order, status):
     finish_turn = False
@@ -88,6 +109,7 @@ def GameStatus(board, order, status):
                 coord[i][j] = '●'
             else:
                 coord[i][j] = '○'
+
 
     print()
     print("* 1  2  3  4  5  6  7 *")

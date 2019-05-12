@@ -8,7 +8,6 @@ def init_data(con):
     f = open("./init.txt", 'r')
     lines = f.readlines()
     for line in lines:
-        print(line)
         cur.execute(line)
     con.commit()
 

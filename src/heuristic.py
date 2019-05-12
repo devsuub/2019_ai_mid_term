@@ -14,9 +14,17 @@ def find_next_row(col, map):
     return -1
 
 def find_max(list):
+
     secondMaxValue = max(list)
     secondMaxI = list.index(secondMaxValue)
+    print(list)
+    print("위 휴리스틱 값들이 나와서")
+    print(secondMaxValue, " 를 골라 ", secondMaxI, "에 놓습니다.")
     return secondMaxI
+
+def set_trash_value(list, i):
+    list[i] = -1000
+    return list
 
 def find_row_full(map, row):
     if (map[5][row] != 0):
@@ -43,6 +51,8 @@ def check_win(con, map, tableName):
             count = count + 1
 
         if (count == 4):
+            print("이기수확인")
+
             return True
 
 
@@ -64,6 +74,7 @@ def check_lose(con, map, tableName):
         if (map[ord(splitLine[7]) - 65][int(splitLine[6]) - 1] == 1):
             count = count + 1
         if (count == 4):
+            print("지는수확인")
             return True
 
 
@@ -72,6 +83,7 @@ def heuristic(con, map):
     global loseValJ
     global result
     result = np.zeros((8, 8, 8, 8, 8, 8))
+    ## init
     for i in range(1, 8):
         for j in range(1, 8):
             for k in range(1, 8):
@@ -82,12 +94,10 @@ def heuristic(con, map):
 
     loseValI = -1000
     loseValJ = -1000
-    print("hhhhhhhheuristic")
-    start_time = time.time()
+
 
     ## 1depth
     for i in range(1, 8):
-        start2_time = time.time()
         tableName = "WINNING_LINE" + str(i)
         sql = "CREATE TABLE " + tableName + " AS SELECT * FROM WINNING_LINE;"
         cur = con.cursor()
@@ -118,69 +128,57 @@ def heuristic(con, map):
         sql = "DROP TABLE IF EXISTS " + tableName + ";"
         cur.execute(sql)
 
-        print("--- %s seconds ---" % (time.time() - start2_time))
 
     if (loseValJ != -1000) and (loseValI != -1000):
         if (loseValI == loseValJ):
             # i를 놓아서 지는 경우
             list = minmax(0)
-            maxValue = max(list)
-            maxI = list.index(maxValue)
+            maxI =  find_max(list)
 
             if (loseValI == maxI):
+                print("그러나 그다음수에 지는 경우가 발생하여서 위 값을 제외하고 다시 휴리스틱을 돌린 결과")
                 # minmax 했을때 지는 경우의 수에 두는경우
                 # 두번째로 큰값을 가져온다
-                del list[maxI]
+                # del list[maxI]
+                list = set_trash_value(list, maxI)
                 secondMaxI = find_max(list)
 
                 while (find_row_full(map, secondMaxI)):
-                    del list[secondMaxI]
+                    print("그러나 해당 row가 꽉차서 다시 휴리스틱을 돌린 결과")
+                    # del list[secondMaxI]
+                    list = set_trash_value(list, secondMaxI)
                     secondMaxI = find_max(list)
                 return secondMaxI
 
             else:
 
                 while (find_row_full(map, maxI)):
-                    del list[maxI]
+                    print("그러나 해당 row가 꽉차서 다시 휴리스틱을 돌린 결과")
+                    # del list[maxI]
+                    list = set_trash_value(list, maxI)
                     maxI = find_max(list)
                 return maxI
 
         else:  # 방어
+            print("방어합니다")
             next = loseValJ - 1
-            while (find_row_full(map, next)):
-                next = random.randrange(1, 8)
+            # while (find_row_full(map, next)):
+            #     next = random.randrange(1, 8)
             return next
     else:
-        print("=============================================rrr")
         list = minmax(0)
-        print(list)
-        print("위 휴리스틱 값 중에서 max 값인")
-        maxValue = max(list)
-        print(maxValue, " 를 골랐습니다")
-        maxI = list.index(maxValue)
+
+        maxI = find_max(list)
 
         while (find_row_full(map, maxI)):
-            del list[maxI]
+            print("그러나 해당 row가 꽉차서 다시 휴리스틱을 돌린 결과")
+
+            # del list[maxI]
+            list = set_trash_value(list, maxI)
             maxI = find_max(list)
-            print("그러나 꽉차서 다음 max값 %d을 골랐습니다.", maxI)
-        return maxI
-        # f = open("/Users/msk/dev/2019_ai_mid_term/src/result.txt", 'w')
-        #
-        # for i in range(1, 8):
-        #     for j in range(1, 8):
-        #         for k in range(1, 8):
-        #             for l in range(1, 8):
-        #                 for m in range(1, 8):
-        #                     for n in range(1, 8):
-        #                         data = str(i) + " " + str(j) + " " + str(k) + " " + str(l) + " " + str(m) + " " + str(n) + "값은 " + str(result[i][j][k][l][m][n]) + "\n"
-        #                         f.write(data)
-        # f.close()
 
         return maxI
-        # print(minmax(0))
 
-        # return (minmax(0))
-        print("--- %s seconds ---" % (time.time() - start_time))
 
 
 def go_2_depth(con, originalTableName, i, j, map, turn):
